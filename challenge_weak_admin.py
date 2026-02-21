@@ -1,7 +1,17 @@
 from flask import Flask, request, render_template_string
 import hashlib
+import time
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 # Weak hardcoded admin credentials
 ADMIN_USERNAME = "admin"
@@ -26,12 +36,15 @@ def home():
     """
 
 @app.route("/admin", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def admin():
     message = ""
 
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+
+        time.sleep(0.5) # slow down brute force
 
         password_hash = hashlib.md5(password.encode()).hexdigest()
 
@@ -44,4 +57,5 @@ def admin():
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+
+    app.run()
